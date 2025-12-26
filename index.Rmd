@@ -1,0 +1,159 @@
+---
+title: Fragility State Index 2023 Analysis
+author: "Chinmai Anandh Chappa"
+output: html_document
+---
+
+# Starting Fresh
+
+```{r}
+rm(list = ls()) # Remove all objects from the environment
+```
+
+# Reading Data
+
+```{r}
+linkGit = "https://github.com/FundamentalsChinmai/Hw01/raw/refs/heads/main/FSI-2023-DOWNLOAD.xlsx" # URL of the Excel Data file
+```
+
+```{r}
+install.packages('rio', repos = "https://cran.rstudio.com/") # Install rio package
+```
+
+```{r}
+library(rio) # Load the rio package needed for importing Excel files
+fragility23 = rio::import(file = linkGit) # Import the Excel file from the URL and store it in the object 'fragility23'
+```
+
+# Exploratory Data Analysis
+
+## Basic Data Inspection
+
+```{r}
+names(x = fragility23) # Print the column names in fragility23
+```
+
+```{r}
+colnames(x = fragility23) # Print the column names in fragility23
+```
+
+```{r}
+str(object = fragility23) # Check the data types of all columns in fragility23
+```
+
+```{r}
+head(x = fragility23, 10) # Print the first 10 rows of fragility23
+```
+
+```{r}
+tail(fragility23, 10) # Print the last 10 rows of fragility23
+```
+
+# Data Transformation
+
+## Subsetting Columns
+
+```{r}
+grep(pattern = "Country|S1|P1|E2|Total",x = names(fragility23),fixed = F,value = T) # Search for and return column names matching the pattern "Country|S1|P1|E2|Total"
+```
+
+```{r}
+keep=grep("Country|S1|P1|E2|Total",names(fragility23),fixed = F,value = T) # Find column names matching the pattern and save them in the object 'keep'
+frag23_sub=fragility23[,keep] # Create a subset of the data containing only the columns stored in 'keep'
+head(frag23_sub, 10) # Display the first 10 rows of the subset to verify the selection
+```
+
+## Renaming Columns
+
+```{r}
+names(frag23_sub)[3:5]=c("S1","E2", "P1") # Rename columns 3, 4, and 5 to "S1", "E2", and "P1" respectively
+head(frag23_sub, 10) # Display the first 10 rows to verify the column renaming
+```
+
+## Finding Top Countries
+
+```{r}
+tail(frag23_sub[order(x=-frag23_sub$E2),],10) # Sort the data by E2 in descending order and display the top 10 countries (lowest E2)
+```
+
+```{r}
+tail(frag23_sub[order(x=-frag23_sub$E2),'Country'],10) # Sort by E2 in descending order and extract only the top 10 countries (lowest E2); Print only country names.
+```
+
+# Statistical Analysis
+
+## Summary Statistics
+
+```{r}
+summary(object = frag23_sub) # Print the statistical description of all columns of the subset
+```
+
+## Quartile Calculation
+
+```{r}
+# Calculate the 75th percentile of the Total column
+q3_Total=quantile(x = frag23_sub$Total, # quantile of Total
+                  probs = 0.75, # cut-off for the 75th percentile
+                  na.rm = TRUE) # remove NA values if any
+```
+
+## Correlation Analysis
+
+```{r}
+cor(x=frag23_sub[,-c(1,2)]) # Calculate correlation matrix for S1, E2, and P1 (excluding 1(Country) and 2(Total) columns)
+```
+
+```{r}
+install.packages("corrtable", repos = "https://cran.rstudio.com/") # install corrtable package
+```
+
+```{r}
+library(corrtable) # Load the corrtable package for correlation analysis with significance tests
+corrtable::correlation_matrix(df = frag23_sub[,-c(1,2)]) # Calculate and display correlations between "S1", "E2", and "P1" with their statistical significance
+```
+
+# Regression Analysis
+
+```{r}
+lm(S1~P1+E2,data=frag23_sub) # Fit and display a linear regression model with S1 as outcome and P1, E2 as predictors
+```
+
+```{r}
+model <- lm(S1 ~ P1 + E2, data = frag23_sub) # Fit a linear regression model with S1 as dependent variable and P1, E2 as independent variables
+summary(model) # Display detailed summary statistics of the regression model including coefficients, R-squared, and p-values
+```
+
+## Histogram
+
+```{r}
+hist(x = frag23_sub$P1) # Plot a histogram to visualize the distribution of the P1 column
+```
+
+## Scatter Plots
+
+```{r}
+plot(x=frag23_sub$S1, y=frag23_sub$E2) # Scatter plot to examine the relationship between S1 and E2
+```
+
+```{r}
+frag23_sub$Total>=q3_Total # Evaluate which countries have Total values greater than or equal to the 75th percentile (worst quartile)
+frag23_sub$worstQt=frag23_sub$Total>=q3_Total # Create a binary variable 'worstQt' indicating whether each country is in the worst quartile
+```
+
+```{r}
+plot(frag23_sub$S1, frag23_sub$E2,    # Create scatter plot of S1 vs E2
+     pch=20, # Use solid dot (pch=20) as the point symbol
+     col = as.factor(frag23_sub$worstQt)) # Color-code points based on whether country is in worst quartile of Total fragility
+```
+
+## Regression Visualization
+
+```{r}
+install.packages("sjPlot", repos = "https://cran.rstudio.com/") # install sjPlot package
+```
+
+```{r}
+library(sjPlot) # Load the sjPlot package for creating publication-ready model visualizations
+plot_models(model) # Generate a visual representation of the regression model showing coefficients and confidence intervals
+```
+
